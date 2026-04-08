@@ -2,42 +2,112 @@ const input = document.querySelector('#input');
 const addBtn = document.querySelector('#addBtn');
 const list = document.querySelector('#list');
 
+const allBtn = document.querySelector('#allBtn');
+const doneBtn = document.querySelector('#doneBtn');
+const notDoneBtn = document.querySelector('#notDoneBtn');
 
-addBtn.addEventListener('click', function () {
-  const value = input.value.trim();
+let todos = [];
+let currentFilter = 'all';
+let nextId = 1;
+
+
+function delayAdd(todo) {
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      resolve(todo);
+    }, 500);
+  });
+}
+
+
+function renderList() {
+
+  while (list.firstChild) {
+    list.removeChild(list.firstChild);
+  }
+
+  let items = todos;
+
+  if (currentFilter === 'done') {
+    items = todos.filter(function (todo) {
+      return todo.done === true;
+    });
+  }
+
+  if (currentFilter === 'notDone') {
+    items = todos.filter(function (todo) {
+      return todo.done === false;
+    });
+  }
+
+  items.forEach(function (todo) {
+
+    const li = document.createElement('li');
+    li.dataset.id = todo.id; 
+
+    const span = document.createElement('span');
+    span.textContent = todo.text;
+
+    if (todo.done) {
+      span.classList.add('done');
+    }
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '수정';
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '삭제';
+
+    li.appendChild(span);
+    li.appendChild(editBtn);
+    li.appendChild(delBtn);
+
+    list.appendChild(li);
+  });
+}
+
+
+addBtn.addEventListener('click', async function () {
+
+  const value = input.value.trim(); 
   if (value === '') return;
 
-  const li = document.createElement('li');
+  const newTodo = {
+    id: nextId,
+    text: value,
+    done: false
+  };
 
-  const span = document.createElement('span');
-  span.textContent = value;
+  nextId++;
 
-  const editBtn = document.createElement('button');
-  editBtn.textContent = '수정';
+  const result = await delayAdd(newTodo);
 
-  const delBtn = document.createElement('button');
-  delBtn.textContent = '삭제';
-
-  li.appendChild(span);
-  li.appendChild(editBtn);
-  li.appendChild(delBtn);
-  list.appendChild(li);
+  todos.push(result); 
 
   input.value = '';
+
+  renderList(); 
 });
 
 
 list.addEventListener('click', function (e) {
 
   const li = e.target.parentElement;
+  if (!li || !li.dataset.id) return;
 
+  const id = Number(li.dataset.id);
 
   if (e.target.textContent === '삭제') {
-    li.remove();
+    todos = todos.filter(function (todo) {
+      return todo.id !== id;
+    });
+
+    renderList();
     return;
   }
 
   if (e.target.textContent === '수정') {
+
     const span = li.querySelector('span');
 
     const editInput = document.createElement('input');
@@ -45,24 +115,46 @@ list.addEventListener('click', function (e) {
 
     li.replaceChild(editInput, span);
 
-    e.target.textContent = '완료'; 
+    e.target.textContent = '수정완료';
     return;
   }
 
-  if (e.target.textContent === '완료') {
+  if (e.target.textContent === '수정완료') {
     const editInput = li.querySelector('input');
+    const value = editInput.value.trim();
+    if (value === '') return;
+    todos.forEach(function (todo) {
+      if (todo.id === id) {
+        todo.text = value;
+      }
+    });
 
-    const span = document.createElement('span');
-    span.textContent = editInput.value;
-
-    li.replaceChild(span, editInput);
-
-    e.target.textContent = '수정';
+    renderList();
     return;
   }
 
   if (e.target.tagName === 'SPAN') {
-    e.target.classList.toggle('done');
-  }
+    todos.forEach(function (todo) {
+      if (todo.id === id) {
+        todo.done = !todo.done;
+      }
+    });
 
+    renderList();
+  }
+});
+
+allBtn.addEventListener('click', function () {
+  currentFilter = 'all';
+  renderList();
+});
+
+doneBtn.addEventListener('click', function () {
+  currentFilter = 'done';
+  renderList();
+});
+
+notDoneBtn.addEventListener('click', function () {
+  currentFilter = 'notDone';
+  renderList();
 });
